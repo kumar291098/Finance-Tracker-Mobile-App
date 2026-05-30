@@ -632,19 +632,11 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
 
     private val sharedPrefs = getApplication<Application>().getSharedPreferences("rupeeflow_prefs", android.content.Context.MODE_PRIVATE)
 
-    fun setPin(pin: String) {
-        sharedPrefs.edit().putString("app_pin", pin).apply()
+    fun isBiometricEnabled(): Boolean {
+        return sharedPrefs.getBoolean("use_biometric", false)
     }
 
-    fun getPin(): String? {
-        return sharedPrefs.getString("app_pin", null)
-    }
-
-    fun isPinRequired(): Boolean {
-        return getPin() != null
-    }
-
-    fun disablePin() {
-        sharedPrefs.edit().remove("app_pin").apply()
+    fun setBiometricEnabled(enabled: Boolean) {
+        sharedPrefs.edit().putBoolean("use_biometric", enabled).apply()
     }
 }

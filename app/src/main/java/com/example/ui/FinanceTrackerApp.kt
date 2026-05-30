@@ -74,6 +74,12 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.LaunchedEffect
+import androidx.fragment.app.FragmentActivity
+import androidx.core.content.ContextCompat
+import androidx.biometric.BiometricPrompt
+import androidx.biometric.BiometricManager
+import android.widget.Toast
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -146,23 +152,68 @@ fun FinanceTrackerApp(viewModel: FinanceViewModel) {
         }
     }
 
-    val savedPin = viewModel.getPin()
-    var isUnlocked by remember { mutableStateOf(savedPin == null) }
-    var showSecurityDialog by remember { mutableStateOf(false) }
-
     var currentTab by remember { mutableStateOf(0) }
-
-    if (!isUnlocked) {
-        PinEntryScreen(
-            correctPin = savedPin ?: "",
-            onUnlocked = { isUnlocked = true }
-        )
-        return
-    }
 
     var showAddDialog by remember { mutableStateOf(false) }
 
     val context = androidx.compose.ui.platform.LocalContext.current
+    val activity = remember(context) { context as? FragmentActivity }
+    
+    var isBiometricSetupEnabled by remember { mutableStateOf(viewModel.isBiometricEnabled()) }
+    var isUnlocked by remember { mutableStateOf(!isBiometricSetupEnabled) }
+
+    fun showBiometricPrompt(
+        title: String,
+        subtitle: String,
+        onSuccess: () -> Unit,
+        onError: (String) -> Unit = {}
+    ) {
+        if (activity == null) {
+            onError("Activity not found")
+            return
+        }
+        val executor = ContextCompat.getMainExecutor(context)
+        val biometricPrompt = BiometricPrompt(
+            activity,
+            executor,
+            object : BiometricPrompt.AuthenticationCallback() {
+                override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    super.onAuthenticationError(errorCode, errString)
+                    onError(errString.toString())
+                }
+
+                override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    super.onAuthenticationSucceeded(result)
+                    onSuccess()
+                }
+
+                override fun onAuthenticationFailed() {
+                    super.onAuthenticationFailed()
+                    onError("Authentication failed")
+                }
+            }
+        )
+
+        val promptInfo = BiometricPrompt.PromptInfo.Builder()
+            .setTitle(title)
+            .setSubtitle(subtitle)
+            .setAllowedAuthenticators(BiometricManager.Authenticators.BIOMETRIC_STRONG or BiometricManager.Authenticators.DEVICE_CREDENTIAL)
+            .build()
+
+        biometricPrompt.authenticate(promptInfo)
+    }
+
+    LaunchedEffect(isUnlocked) {
+        if (!isUnlocked) {
+            showBiometricPrompt(
+                title = "Unlock RupeeFlow",
+                subtitle = "Authenticate using fingerprint or phone password",
+                onSuccess = { isUnlocked = true },
+                onError = { err -> }
+            )
+        }
+    }
+
     var isLoading by remember { mutableStateOf(false) }
     var statusMessage by remember { mutableStateOf<String?>(null) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
@@ -342,6 +393,62 @@ fun FinanceTrackerApp(viewModel: FinanceViewModel) {
         }
     }
 
+    if (!isUnlocked) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(DarkBg)
+                .padding(24.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center
+        ) {
+            Icon(
+                imageVector = Icons.Default.Lock,
+                contentDescription = "App Locked",
+                tint = AccentIndigo,
+                modifier = Modifier.size(72.dp)
+            )
+            Spacer(modifier = Modifier.height(24.dp))
+            Text(
+                text = "RupeeFlow is Locked",
+                color = TextPrimary,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Text(
+                text = "Use your device fingerprint or screen lock credentials to unlock",
+                color = TextSecondary,
+                fontSize = 14.sp,
+                textAlign = TextAlign.Center,
+                modifier = Modifier.padding(horizontal = 24.dp)
+            )
+            Spacer(modifier = Modifier.height(40.dp))
+            Button(
+                onClick = {
+                    showBiometricPrompt(
+                        title = "Unlock RupeeFlow",
+                        subtitle = "Authenticate using fingerprint or phone password",
+                        onSuccess = { isUnlocked = true }
+                    )
+                },
+                colors = ButtonDefaults.buttonColors(containerColor = AccentIndigo),
+                shape = RoundedCornerShape(16.dp),
+                modifier = Modifier
+                    .height(56.dp)
+                    .fillMaxWidth(0.7f)
+            ) {
+                Text(
+                    text = "Unlock",
+                    color = TextPrimary,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+        return
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -365,12 +472,28 @@ fun FinanceTrackerApp(viewModel: FinanceViewModel) {
                     }
                 },
                 actions = {
-                    val isSecure = savedPin != null
-                    IconButton(onClick = { showSecurityDialog = true }) {
+                    IconButton(
+                        onClick = {
+                            val newSetting = !isBiometricSetupEnabled
+                            showBiometricPrompt(
+                                title = if (newSetting) "Enable App Lock" else "Disable App Lock",
+                                subtitle = "Authenticate to confirm your identity",
+                                onSuccess = {
+                                    viewModel.setBiometricEnabled(newSetting)
+                                    isBiometricSetupEnabled = newSetting
+                                    val status = if (newSetting) "enabled" else "disabled"
+                                    Toast.makeText(context, "App lock $status successfully", Toast.LENGTH_SHORT).show()
+                                },
+                                onError = { err ->
+                                    Toast.makeText(context, "Authentication failed: $err", Toast.LENGTH_SHORT).show()
+                                }
+                            )
+                        }
+                    ) {
                         Icon(
-                            imageVector = if (isSecure) Icons.Default.Lock else Icons.Default.LockOpen,
-                            contentDescription = "App Security Settings",
-                            tint = if (isSecure) IncomeGreen else TextSecondary
+                            imageVector = if (isBiometricSetupEnabled) Icons.Default.Lock else Icons.Default.LockOpen,
+                            contentDescription = "Toggle App Lock",
+                            tint = if (isBiometricSetupEnabled) IncomeGreen else TextSecondary
                         )
                     }
                 },
@@ -865,20 +988,6 @@ fun FinanceTrackerApp(viewModel: FinanceViewModel) {
         }
     }
 
-    if (showSecurityDialog) {
-        SecurityDialog(
-            currentPin = savedPin,
-            onSetPin = { pin ->
-                viewModel.setPin(pin)
-            },
-            onDisablePin = {
-                viewModel.disablePin()
-            },
-            onDismiss = {
-                showSecurityDialog = false
-            }
-        )
-    }
 }
 
 
@@ -1816,296 +1925,6 @@ fun TrendGraph(chartPoints: List<ChartPoint>, modifier: Modifier = Modifier) {
     }
 }
 
-@Composable
-fun PinEntryScreen(correctPin: String, onUnlocked: () -> Unit) {
-    var enteredPin by remember { mutableStateOf("") }
-    var showError by remember { mutableStateOf(false) }
-
-    Column(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(DarkBg)
-            .padding(24.dp),
-        horizontalAlignment = Alignment.CenterHorizontally,
-        verticalArrangement = Arrangement.SpaceBetween
-    ) {
-        Spacer(modifier = Modifier.height(40.dp))
-
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Icon(
-                imageVector = Icons.Default.Lock,
-                contentDescription = "Lock",
-                tint = AccentIndigo,
-                modifier = Modifier.size(64.dp)
-            )
-            Spacer(modifier = Modifier.height(16.dp))
-            Text(
-                text = "Secure Access",
-                color = TextPrimary,
-                fontSize = 24.sp,
-                fontWeight = FontWeight.Bold
-            )
-            Spacer(modifier = Modifier.height(8.dp))
-            Text(
-                text = if (showError) "Incorrect PIN, try again" else "Enter your 4-digit PIN to unlock",
-                color = if (showError) ExpenseRed else TextSecondary,
-                fontSize = 14.sp,
-                fontWeight = FontWeight.Medium
-            )
-        }
-
-        Row(
-            horizontalArrangement = Arrangement.spacedBy(16.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            for (i in 0 until 4) {
-                val isActive = enteredPin.length > i
-                Box(
-                    modifier = Modifier
-                        .size(16.dp)
-                        .clip(CircleShape)
-                        .background(if (isActive) AccentIndigo else CardBorder)
-                        .border(
-                            width = 2.dp,
-                            color = if (isActive) AccentViolet else Color.Transparent,
-                            shape = CircleShape
-                        )
-                )
-            }
-        }
-
-        Column(
-            modifier = Modifier.fillMaxWidth(),
-            verticalArrangement = Arrangement.spacedBy(12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            val keys = listOf(
-                listOf("1", "2", "3"),
-                listOf("4", "5", "6"),
-                listOf("7", "8", "9"),
-                listOf("", "0", "DEL")
-            )
-            for (row in keys) {
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(24.dp),
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Spacer(modifier = Modifier.weight(1f))
-                    for (key in row) {
-                        if (key.isEmpty()) {
-                            Box(modifier = Modifier.size(68.dp))
-                        } else {
-                            KeyButton(
-                                text = key,
-                                onClick = {
-                                    if (key == "DEL") {
-                                        if (enteredPin.isNotEmpty()) {
-                                            enteredPin = enteredPin.dropLast(1)
-                                            showError = false
-                                        }
-                                    } else {
-                                        if (enteredPin.length < 4) {
-                                            enteredPin += key
-                                            showError = false
-                                            if (enteredPin.length == 4) {
-                                                if (enteredPin == correctPin) {
-                                                    onUnlocked()
-                                                } else {
-                                                    showError = true
-                                                    enteredPin = ""
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            )
-                        }
-                    }
-                    Spacer(modifier = Modifier.weight(1f))
-                }
-            }
-        }
-
-        Spacer(modifier = Modifier.height(40.dp))
-    }
-}
-
-@Composable
-fun KeyButton(text: String, onClick: () -> Unit) {
-    Box(
-        modifier = Modifier
-            .size(68.dp)
-            .clip(CircleShape)
-            .background(CardBg)
-            .clickable { onClick() }
-            .border(1.dp, CardBorder, CircleShape),
-        contentAlignment = Alignment.Center
-    ) {
-        Text(
-            text = text,
-            color = TextPrimary,
-            fontSize = 22.sp,
-            fontWeight = FontWeight.Bold
-        )
-    }
-}
-
-@Composable
-fun SecurityDialog(
-    currentPin: String?,
-    onSetPin: (String) -> Unit,
-    onDisablePin: () -> Unit,
-    onDismiss: () -> Unit
-) {
-    val isSecure = currentPin != null
-    var step by remember { mutableStateOf(if (isSecure) "DISABLE" else "ENTER_NEW") }
-    
-    var pinValue by remember { mutableStateOf("") }
-    var confirmValue by remember { mutableStateOf("") }
-    var showError by remember { mutableStateOf(false) }
-
-    Dialog(onDismissRequest = onDismiss) {
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = CardBg,
-            modifier = Modifier
-                .fillMaxWidth()
-                .border(1.dp, CardBorder, RoundedCornerShape(24.dp))
-        ) {
-            Column(
-                modifier = Modifier.padding(24.dp),
-                horizontalAlignment = Alignment.CenterHorizontally
-            ) {
-                Text(
-                    text = when (step) {
-                        "DISABLE" -> "Disable App Lock"
-                        "ENTER_NEW" -> "Setup App Lock PIN"
-                        "CONFIRM" -> "Confirm App Lock PIN"
-                        else -> ""
-                    },
-                    color = TextPrimary,
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-
-                Text(
-                    text = when (step) {
-                        "DISABLE" -> if (showError) "Wrong PIN, please try again" else "Enter current 4-digit PIN to disable app lock"
-                        "ENTER_NEW" -> "Enter a new 4-digit PIN"
-                        "CONFIRM" -> if (showError) "PINs do not match" else "Confirm your 4-digit PIN"
-                        else -> ""
-                    },
-                    color = if (showError) ExpenseRed else TextSecondary,
-                    fontSize = 13.sp,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(bottom = 20.dp)
-                )
-
-                val valueToShow = if (step == "CONFIRM") confirmValue else pinValue
-                Row(
-                    horizontalArrangement = Arrangement.spacedBy(12.dp)
-                ) {
-                    for (i in 0 until 4) {
-                        val active = valueToShow.length > i
-                        Box(
-                            modifier = Modifier
-                                .size(14.dp)
-                                .clip(CircleShape)
-                                .background(if (active) AccentIndigo else CardBorder)
-                        )
-                    }
-                }
-
-                Spacer(modifier = Modifier.height(24.dp))
-
-                Column(
-                    modifier = Modifier.fillMaxWidth(),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    val rows = listOf(
-                        listOf("Cancel", "0", "DEL"),
-                        listOf("1", "2", "3"),
-                        listOf("4", "5", "6"),
-                        listOf("7", "8", "9")
-                    ).reversed()
-                    
-                    for (row in rows) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(16.dp),
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            for (key in row) {
-                                Button(
-                                    onClick = {
-                                        if (key == "Cancel") {
-                                            onDismiss()
-                                        } else if (key == "DEL") {
-                                            if (step == "CONFIRM") {
-                                                if (confirmValue.isNotEmpty()) confirmValue = confirmValue.dropLast(1)
-                                            } else {
-                                                if (pinValue.isNotEmpty()) pinValue = pinValue.dropLast(1)
-                                            }
-                                            showError = false
-                                        } else {
-                                            val currentVal = if (step == "CONFIRM") confirmValue else pinValue
-                                            if (currentVal.length < 4) {
-                                                val newVal = currentVal + key
-                                                if (step == "CONFIRM") {
-                                                    confirmValue = newVal
-                                                    if (newVal.length == 4) {
-                                                        if (newVal == pinValue) {
-                                                            onSetPin(pinValue)
-                                                            onDismiss()
-                                                        } else {
-                                                            showError = true
-                                                            confirmValue = ""
-                                                        }
-                                                    }
-                                                } else if (step == "DISABLE") {
-                                                    pinValue = newVal
-                                                    if (newVal.length == 4) {
-                                                        if (newVal == currentPin) {
-                                                            onDisablePin()
-                                                            onDismiss()
-                                                        } else {
-                                                            showError = true
-                                                            pinValue = ""
-                                                        }
-                                                    }
-                                                } else {
-                                                    pinValue = newVal
-                                                    if (newVal.length == 4) {
-                                                        step = "CONFIRM"
-                                                    }
-                                                }
-                                            }
-                                        }
-                                    },
-                                    modifier = Modifier
-                                        .weight(1f)
-                                        .height(48.dp)
-                                        .border(
-                                            width = 1.dp,
-                                            color = CardBorder,
-                                            shape = RoundedCornerShape(12.dp)
-                                        ),
-                                    shape = RoundedCornerShape(12.dp),
-                                    colors = ButtonDefaults.buttonColors(
-                                        containerColor = if (key == "Cancel" || key == "DEL") DarkBg else CardBg
-                                    )
-                                ) {
-                                    Text(text = key, color = TextPrimary, fontSize = 14.sp, fontWeight = FontWeight.Bold)
-                                }
-                            }
-                        }
-                    }
-                }
-        }
-    }
-}
-}
 
 @Composable
 fun RupeeFlowBottomNavigation(selectedTab: Int, onTabSelected: (Int) -> Unit) {
