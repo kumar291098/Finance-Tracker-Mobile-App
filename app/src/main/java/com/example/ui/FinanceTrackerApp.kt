@@ -2170,6 +2170,106 @@ fun RupeeFlowBottomNavigation(selectedTab: Int, onTabSelected: (Int) -> Unit) {
 }
 
 @Composable
+fun CategoryPieChart(categoryTotals: Map<String, Double>, modifier: Modifier = Modifier) {
+    val total = categoryTotals.values.sum()
+    if (total <= 0.0) return
+
+    val categoriesList = categoryTotals.toList().sortedByDescending { it.second }
+
+    Column(
+        modifier = modifier.fillMaxWidth(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Box(
+            modifier = Modifier.size(160.dp),
+            contentAlignment = Alignment.Center
+        ) {
+            androidx.compose.foundation.Canvas(modifier = Modifier.size(130.dp)) {
+                var startAngle = -90f
+                categoriesList.forEach { (category, amount) ->
+                    val sweepAngle = ((amount / total) * 360f).toFloat()
+                    val color = getCategoryColor(category)
+                    drawArc(
+                        color = color,
+                        startAngle = startAngle,
+                        sweepAngle = sweepAngle,
+                        useCenter = false,
+                        style = androidx.compose.ui.graphics.drawscope.Stroke(
+                            width = 16.dp.toPx(),
+                            cap = androidx.compose.ui.graphics.StrokeCap.Butt
+                        )
+                    )
+                    startAngle += sweepAngle
+                }
+            }
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Text(
+                    text = "Total Spent",
+                    color = TextSecondary,
+                    fontSize = 11.sp,
+                    fontWeight = FontWeight.Medium
+                )
+                Text(
+                    text = String.format("₹%.2f", total),
+                    color = TextPrimary,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold
+                )
+            }
+        }
+
+        Spacer(modifier = Modifier.height(16.dp))
+
+        // Grid-based Legend for clean visual layout
+        Column(
+            modifier = Modifier.fillMaxWidth(),
+            verticalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            categoriesList.chunked(2).forEach { rowItems ->
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceEvenly
+                ) {
+                    rowItems.forEach { (category, amount) ->
+                        val percentage = (amount / total) * 100
+                        val color = getCategoryColor(category)
+                        Row(
+                            modifier = Modifier.weight(1f).padding(horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.Start
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(10.dp)
+                                    .clip(CircleShape)
+                                    .background(color)
+                            )
+                            Spacer(modifier = Modifier.width(6.dp))
+                            Column {
+                                Text(
+                                    text = category,
+                                    color = TextPrimary,
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                                Text(
+                                    text = String.format("₹%.2f (%.1f%%)", amount, percentage),
+                                    color = TextSecondary,
+                                    fontSize = 10.sp
+                                )
+                            }
+                        }
+                    }
+                    if (rowItems.size < 2) {
+                        Spacer(modifier = Modifier.weight(1f))
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
 fun AnalysisScreen(viewModel: com.example.viewmodel.FinanceViewModel, modifier: Modifier = Modifier) {
     val averageSize by viewModel.averageTransactionSize.collectAsState()
     val topCategory by viewModel.topSpendingCategory.collectAsState()
@@ -2410,6 +2510,10 @@ fun AnalysisScreen(viewModel: com.example.viewmodel.FinanceViewModel, modifier: 
                             color = TextPrimary
                         )
                         Spacer(modifier = Modifier.height(16.dp))
+
+                        CategoryPieChart(categoryTotals = categoryTotals)
+
+                        Spacer(modifier = Modifier.height(24.dp))
 
                         val maxSpent = categoryTotals.values.maxOrNull() ?: 1.0
 
