@@ -1487,7 +1487,9 @@ fun AddTransactionDialog(onDismiss: () -> Unit, onSave: (String, Double, String,
                         unfocusedBorderColor = CardBorder,
                         focusedLabelColor = AccentIndigo,
                         unfocusedLabelColor = TextSecondary,
-                        cursorColor = AccentIndigo
+                        cursorColor = AccentIndigo,
+                        focusedContainerColor = DarkBg,
+                        unfocusedContainerColor = DarkBg
                     ),
                     shape = RoundedCornerShape(14.dp),
                     singleLine = true,
@@ -1507,7 +1509,9 @@ fun AddTransactionDialog(onDismiss: () -> Unit, onSave: (String, Double, String,
                         unfocusedBorderColor = CardBorder,
                         focusedLabelColor = AccentIndigo,
                         unfocusedLabelColor = TextSecondary,
-                        cursorColor = AccentIndigo
+                        cursorColor = AccentIndigo,
+                        focusedContainerColor = DarkBg,
+                        unfocusedContainerColor = DarkBg
                     ),
                     shape = RoundedCornerShape(14.dp),
                     singleLine = true,
