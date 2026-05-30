@@ -5,6 +5,9 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.Image
+import androidx.compose.ui.res.painterResource
+import com.example.R
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -343,11 +346,23 @@ fun FinanceTrackerApp(viewModel: FinanceViewModel) {
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        text = "RupeeFlow",
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary
-                    )
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Image(
+                            painter = painterResource(id = R.drawable.ic_codinghelp),
+                            contentDescription = "CodingHelp Logo",
+                            modifier = Modifier
+                                .size(32.dp)
+                                .padding(end = 8.dp)
+                                .clip(CircleShape)
+                        )
+                        Text(
+                            text = "RupeeFlow",
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary
+                        )
+                    }
                 },
                 actions = {
                     val isSecure = savedPin != null
