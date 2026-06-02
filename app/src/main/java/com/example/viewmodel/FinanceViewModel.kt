@@ -1,6 +1,7 @@
 package com.example.viewmodel
 
 import android.app.Application
+import android.net.Uri
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
 import android.util.Base64
@@ -77,7 +78,69 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
 
     private val client = OkHttpClient()
 
-    private val validCategories = listOf("Salary", "Food", "Shopping", "Rent", "Transport", "Utilities", "Entertainment", "Other")
+    private val validCategories = listOf(
+        "Salary",
+        "Business",
+        "Freelance",
+        "Bonus",
+        "Interest",
+        "Dividend",
+        "Investment",
+        "Stock",
+        "Mutual Fund",
+        "Rental Income",
+        "Gift",
+        "Refund",
+        "Food",
+        "Grocery",
+        "Restaurant",
+        "Cafe",
+        "Drinks",
+        "Smoking",
+        "Shopping",
+        "Clothing",
+        "Personal Care",
+        "Rent",
+        "EMI",
+        "Loan",
+        "Credit Card",
+        "Transport",
+        "Fuel",
+        "Parking",
+        "Taxi",
+        "Bus",
+        "Train",
+        "Flight",
+        "Utilities",
+        "Bills",
+        "Electricity",
+        "Water",
+        "Gas",
+        "Internet",
+        "Mobile",
+        "Subscription",
+        "Insurance",
+        "Medical",
+        "Pharmacy",
+        "Education",
+        "Childcare",
+        "Sports",
+        "Fitness",
+        "Entertainment",
+        "Movies",
+        "Travel",
+        "Hotel",
+        "Home Repair",
+        "Maintenance",
+        "Taxes",
+        "Charity",
+        "Gifts",
+        "Fees",
+        "Bank Charges",
+        "Cash Withdrawal",
+        "Other"
+    )
+    private val validCategoriesPrompt = validCategories.joinToString("', '", prefix = "'", postfix = "'")
 
     init {
         val database = AppDatabase.getDatabase(application)
@@ -260,26 +323,29 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     }
 
     // XML Export
-    fun exportToXml(outputStream: java.io.OutputStream, onComplete: () -> Unit, onError: (String) -> Unit) {
+    fun exportToXml(uri: Uri, onComplete: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val list = allTransactions.value
-                val sb = StringBuilder()
-                sb.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
-                sb.append("<transactions>\n")
-                for (t in list) {
-                    sb.append("    <transaction>\n")
-                    sb.append("        <title>${escapeXml(t.title)}</title>\n")
-                    sb.append("        <amount>${t.amount}</amount>\n")
-                    sb.append("        <type>${t.type}</type>\n")
-                    sb.append("        <category>${escapeXml(t.category)}</category>\n")
-                    sb.append("        <date>${t.date}</date>\n")
-                    sb.append("        <description>${escapeXml(t.description ?: "")}</description>\n")
-                    sb.append("    </transaction>\n")
+                val contentResolver = getApplication<Application>().contentResolver
+                val outputStream = contentResolver.openOutputStream(uri) ?: throw java.io.IOException("Failed to open output stream")
+                outputStream.use { stream ->
+                    val list = allTransactions.value
+                    val sb = StringBuilder()
+                    sb.append("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n")
+                    sb.append("<transactions>\n")
+                    for (t in list) {
+                        sb.append("    <transaction>\n")
+                        sb.append("        <title>${escapeXml(t.title)}</title>\n")
+                        sb.append("        <amount>${t.amount}</amount>\n")
+                        sb.append("        <type>${t.type}</type>\n")
+                        sb.append("        <category>${escapeXml(t.category)}</category>\n")
+                        sb.append("        <date>${t.date}</date>\n")
+                        sb.append("        <description>${escapeXml(t.description ?: "")}</description>\n")
+                        sb.append("    </transaction>\n")
+                    }
+                    sb.append("</transactions>\n")
+                    stream.write(sb.toString().toByteArray(Charsets.UTF_8))
                 }
-                sb.append("</transactions>\n")
-                outputStream.write(sb.toString().toByteArray())
-                outputStream.close()
                 withContext(Dispatchers.Main) {
                     onComplete()
                 }
@@ -300,24 +366,31 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     }
 
     // CSV Export
-    fun exportToCsv(outputStream: java.io.OutputStream, onComplete: () -> Unit, onError: (String) -> Unit) {
+    fun exportToCsv(uri: Uri, onComplete: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val list = filteredTransactions.value
-                val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
-                val sb = StringBuilder()
-                sb.append("Title,Amount (₹),Type,Category,Date,Description\n")
-                for (t in list) {
-                    val title = escapeCsv(t.title)
-                    val amount = t.amount
-                    val type = t.type
-                    val category = escapeCsv(t.category)
-                    val dateStr = dateFormat.format(Date(t.date))
-                    val desc = escapeCsv(t.description ?: "")
-                    sb.append("\"$title\",$amount,$type,\"$category\",\"$dateStr\",\"$desc\"\n")
+                val contentResolver = getApplication<Application>().contentResolver
+                val outputStream = contentResolver.openOutputStream(uri) ?: throw java.io.IOException("Failed to open output stream")
+                outputStream.use { stream ->
+                    // Write UTF-8 BOM
+                    val bom = byteArrayOf(0xEF.toByte(), 0xBB.toByte(), 0xBF.toByte())
+                    stream.write(bom)
+                    
+                    val list = filteredTransactions.value
+                    val dateFormat = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                    val sb = StringBuilder()
+                    sb.append("Title,Amount (₹),Type,Category,Date,Description\n")
+                    for (t in list) {
+                        val title = escapeCsv(t.title)
+                        val amount = t.amount
+                        val type = t.type
+                        val category = escapeCsv(t.category)
+                        val dateStr = dateFormat.format(Date(t.date))
+                        val desc = escapeCsv(t.description ?: "")
+                        sb.append("\"$title\",$amount,$type,\"$category\",\"$dateStr\",\"$desc\"\n")
+                    }
+                    stream.write(sb.toString().toByteArray(Charsets.UTF_8))
                 }
-                outputStream.write(sb.toString().toByteArray())
-                outputStream.close()
                 withContext(Dispatchers.Main) {
                     onComplete()
                 }
@@ -337,69 +410,71 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     fun importFromXml(inputStream: java.io.InputStream, onComplete: (Int) -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
             try {
-                val parser = Xml.newPullParser()
-                parser.setInput(inputStream, null)
-                var eventType = parser.eventType
                 var count = 0
+                inputStream.use { stream ->
+                    val parser = Xml.newPullParser()
+                    parser.setInput(stream, null)
+                    var eventType = parser.eventType
 
-                var currentTitle = ""
-                var currentAmount = 0.0
-                var currentType = ""
-                var currentCategory = ""
-                var currentDate = 0L
-                var currentDescription: String? = null
+                    var currentTitle = ""
+                    var currentAmount = 0.0
+                    var currentType = ""
+                    var currentCategory = ""
+                    var currentDate = 0L
+                    var currentDescription: String? = null
 
-                var insideTag = ""
+                    var currentTag = ""
 
-                while (eventType != XmlPullParser.END_DOCUMENT) {
-                    when (eventType) {
-                        XmlPullParser.START_TAG -> {
-                            insideTag = parser.name
-                            if (insideTag == "transaction") {
-                                currentTitle = ""
-                                currentAmount = 0.0
-                                currentType = "EXPENSE"
-                                currentCategory = "Other"
-                                currentDate = System.currentTimeMillis()
-                                currentDescription = null
+                    while (eventType != XmlPullParser.END_DOCUMENT) {
+                        when (eventType) {
+                            XmlPullParser.START_TAG -> {
+                                val name = parser.name
+                                if (name == "transaction") {
+                                    currentTitle = ""
+                                    currentAmount = 0.0
+                                    currentType = "EXPENSE"
+                                    currentCategory = "Other"
+                                    currentDate = System.currentTimeMillis()
+                                    currentDescription = null
+                                }
+                                currentTag = name
                             }
-                        }
-                        XmlPullParser.TEXT -> {
-                            val text = parser.text.trim()
-                            if (text.isNotEmpty()) {
-                                when (insideTag) {
-                                    "title" -> currentTitle = text
-                                    "amount" -> currentAmount = text.toDoubleOrNull() ?: 0.0
-                                    "type" -> currentType = text
-                                    "category" -> currentCategory = text
-                                    "date" -> currentDate = text.toLongOrNull() ?: System.currentTimeMillis()
-                                    "description" -> currentDescription = text.ifEmpty { null }
+                            XmlPullParser.TEXT -> {
+                                val text = parser.text.trim()
+                                if (text.isNotEmpty()) {
+                                    when (currentTag) {
+                                        "title" -> currentTitle = if (currentTitle.isEmpty()) text else currentTitle + text
+                                        "amount" -> currentAmount = text.toDoubleOrNull() ?: currentAmount
+                                        "type" -> currentType = text
+                                        "category" -> currentCategory = text
+                                        "date" -> currentDate = text.toLongOrNull() ?: currentDate
+                                        "description" -> currentDescription = if (currentDescription == null) text else currentDescription + text
+                                    }
                                 }
                             }
-                        }
-                        XmlPullParser.END_TAG -> {
-                            val tag = parser.name
-                            if (tag == "transaction") {
-                                if (currentAmount > 0.0 && currentTitle.isNotEmpty()) {
-                                    repository.insert(
-                                        Transaction(
-                                            title = currentTitle,
-                                            amount = currentAmount,
-                                            type = currentType,
-                                            category = currentCategory,
-                                            date = currentDate,
-                                            description = currentDescription
+                            XmlPullParser.END_TAG -> {
+                                val name = parser.name
+                                if (name == "transaction") {
+                                    if (currentAmount > 0.0 && currentTitle.isNotEmpty()) {
+                                        repository.insert(
+                                            Transaction(
+                                                title = currentTitle,
+                                                amount = currentAmount,
+                                                type = currentType,
+                                                category = currentCategory,
+                                                date = currentDate,
+                                                description = currentDescription
+                                            )
                                         )
-                                    )
-                                    count++
+                                        count++
+                                    }
                                 }
+                                currentTag = ""
                             }
-                            insideTag = ""
                         }
+                        eventType = parser.next()
                     }
-                    eventType = parser.next()
                 }
-                inputStream.close()
                 withContext(Dispatchers.Main) {
                     onComplete(count)
                 }
@@ -412,14 +487,12 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
     }
 
     // PDF Statement Export
-    fun exportToPdf(outputStream: OutputStream, onComplete: () -> Unit, onError: (String) -> Unit) {
+    fun exportToPdf(uri: Uri, onComplete: () -> Unit, onError: (String) -> Unit) {
         viewModelScope.launch(Dispatchers.IO) {
+            var pdfDocument: PdfDocument? = null
             try {
                 val list = filteredTransactions.value
-                val pdfDocument = PdfDocument()
-                val pageInfo = PdfDocument.PageInfo.Builder(595, 842, 1).create()
-                val page = pdfDocument.startPage(pageInfo)
-                val canvas = page.canvas
+                pdfDocument = PdfDocument()
 
                 val titlePaint = Paint().apply {
                     color = android.graphics.Color.BLACK
@@ -455,8 +528,26 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                     strokeWidth = 1f
                 }
 
-                canvas.drawText("RupeeFlow - Financial Statement", 40f, 60f, titlePaint)
+                val summaryTitlePaint = Paint().apply {
+                    color = android.graphics.Color.GRAY
+                    textSize = 10f
+                }
+                
+                val summaryValuePaint = Paint().apply {
+                    color = android.graphics.Color.BLACK
+                    textSize = 14f
+                    isFakeBoldText = true
+                }
 
+                val itemDateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
+
+                var pageNumber = 1
+                var pageInfo = PdfDocument.PageInfo.Builder(595, 842, pageNumber).create()
+                var page = pdfDocument.startPage(pageInfo)
+                var canvas = page.canvas
+
+                // Draw Page 1 header elements
+                canvas.drawText("RupeeFlow - Financial Statement", 40f, 60f, titlePaint)
                 val dateFormat = SimpleDateFormat("MMM dd, yyyy HH:mm", Locale.getDefault())
                 canvas.drawText("Generated on: ${dateFormat.format(Date())}", 40f, 85f, textPaint)
 
@@ -465,16 +556,6 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                     color = android.graphics.Color.parseColor("#F1F5F9")
                     style = Paint.Style.FILL
                 })
-
-                val summaryTitlePaint = Paint().apply {
-                    color = android.graphics.Color.GRAY
-                    textSize = 10f
-                }
-                val summaryValuePaint = Paint().apply {
-                    color = android.graphics.Color.BLACK
-                    textSize = 14f
-                    isFakeBoldText = true
-                }
 
                 canvas.drawText("Total Income", 60f, 130f, summaryTitlePaint)
                 canvas.drawText(String.format("₹%.2f", totalIncome.value), 60f, 155f, summaryValuePaint)
@@ -485,7 +566,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 canvas.drawText("Net Balance", 420f, 130f, summaryTitlePaint)
                 canvas.drawText(String.format("₹%.2f", totalBalance.value), 420f, 155f, summaryValuePaint)
 
-                // Table Header
+                // Table Header (Page 1)
                 var yPosition = 210f
                 canvas.drawText("Title", 40f, yPosition, headerPaint)
                 canvas.drawText("Category", 220f, yPosition, headerPaint)
@@ -494,12 +575,32 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 canvas.drawLine(40f, yPosition + 10f, 555f, yPosition + 10f, linePaint)
 
                 yPosition += 30f
-                val itemDateFormat = SimpleDateFormat("MMM dd, yyyy", Locale.getDefault())
 
                 for (t in list) {
                     if (yPosition > 800f) {
-                        break
+                        pdfDocument.finishPage(page)
+                        
+                        pageNumber++
+                        pageInfo = PdfDocument.PageInfo.Builder(595, 842, pageNumber).create()
+                        page = pdfDocument.startPage(pageInfo)
+                        canvas = page.canvas
+                        
+                        // Draw header on new page
+                        canvas.drawText("RupeeFlow - Financial Statement (Page $pageNumber)", 40f, 40f, Paint().apply {
+                            color = android.graphics.Color.GRAY
+                            textSize = 10f
+                        })
+                        
+                        yPosition = 70f
+                        canvas.drawText("Title", 40f, yPosition, headerPaint)
+                        canvas.drawText("Category", 220f, yPosition, headerPaint)
+                        canvas.drawText("Date", 350f, yPosition, headerPaint)
+                        canvas.drawText("Amount", 480f, yPosition, headerPaint)
+                        canvas.drawLine(40f, yPosition + 10f, 555f, yPosition + 10f, linePaint)
+                        
+                        yPosition += 30f
                     }
+                    
                     canvas.drawText(t.title, 40f, yPosition, textPaint)
                     canvas.drawText(t.category, 220f, yPosition, textPaint)
                     canvas.drawText(itemDateFormat.format(Date(t.date)), 350f, yPosition, textPaint)
@@ -515,11 +616,14 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                     })
                     yPosition += 25f
                 }
-
+                
                 pdfDocument.finishPage(page)
-                pdfDocument.writeTo(outputStream)
-                pdfDocument.close()
-                outputStream.close()
+
+                val contentResolver = getApplication<Application>().contentResolver
+                val outputStream = contentResolver.openOutputStream(uri) ?: throw java.io.IOException("Failed to open output stream")
+                outputStream.use { stream ->
+                    pdfDocument.writeTo(stream)
+                }
 
                 withContext(Dispatchers.Main) {
                     onComplete()
@@ -528,6 +632,8 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                 withContext(Dispatchers.Main) {
                     onError("Failed to export PDF: ${e.localizedMessage}")
                 }
+            } finally {
+                pdfDocument?.close()
             }
         }
     }
@@ -550,7 +656,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                         put(JSONObject().apply {
                             put("parts", JSONArray().apply {
                                 put(JSONObject().apply {
-                                    put("text", "Analyze this receipt/invoice/statement file. Extract all transactions. Return ONLY a raw JSON array of objects representing the transactions. Each transaction object MUST contain: 'title' (string), 'amount' (double), 'type' (string: either 'INCOME' or 'EXPENSE'), 'category' (string: one of 'Salary', 'Food', 'Shopping', 'Rent', 'Transport', 'Utilities', 'Entertainment', 'Other'), and 'date' (timestamp in milliseconds, use current timestamp if not specified). Do not include any markdown formatting like ```json ... ``` or anything else. Just return the raw JSON array string.")
+                                    put("text", "Analyze this receipt/invoice/statement file. Extract all transactions. Return ONLY a raw JSON array of objects representing the transactions. Each transaction object MUST contain: 'title' (string), 'amount' (double), 'type' (string: either 'INCOME' or 'EXPENSE'), 'category' (string: one of $validCategoriesPrompt), and 'date' (timestamp in milliseconds, use current timestamp if not specified). Do not include any markdown formatting like ```json ... ``` or anything else. Just return the raw JSON array string.")
                                 })
                                 put(JSONObject().apply {
                                     put("inlineData", JSONObject().apply {
@@ -603,6 +709,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                     val amount = item.optDouble("amount", 0.0)
                     val type = item.optString("type", "EXPENSE").uppercase()
                     val category = item.optString("category", "Other")
+                    val normalizedCategory = validCategories.firstOrNull { it.equals(category, ignoreCase = true) } ?: "Other"
                     val date = item.optLong("date", System.currentTimeMillis())
 
                     if (amount > 0.0) {
@@ -611,7 +718,7 @@ class FinanceViewModel(application: Application) : AndroidViewModel(application)
                                 title = title,
                                 amount = amount,
                                 type = if (type == "INCOME") "INCOME" else "EXPENSE",
-                                category = if (validCategories.contains(category)) category else "Other",
+                                category = normalizedCategory,
                                 date = date
                             )
                         )

@@ -27,28 +27,57 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AccountBalance
+import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.AttachMoney
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Build
+import androidx.compose.material.icons.filled.BusinessCenter
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Celebration
 import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ChildCare
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.CreditCard
 import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.DirectionsBus
 import androidx.compose.material.icons.filled.DirectionsCar
 import androidx.compose.material.icons.filled.DocumentScanner
 import androidx.compose.material.icons.filled.Error
 import androidx.compose.material.icons.filled.Event
 import androidx.compose.material.icons.filled.Fastfood
+import androidx.compose.material.icons.filled.Favorite
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
+import androidx.compose.material.icons.filled.FitnessCenter
+import androidx.compose.material.icons.filled.Flight
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Hotel
 import androidx.compose.material.icons.filled.Lightbulb
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.LockOpen
+import androidx.compose.material.icons.filled.LocalCafe
+import androidx.compose.material.icons.filled.LocalDrink
+import androidx.compose.material.icons.filled.LocalGasStation
+import androidx.compose.material.icons.filled.LocalGroceryStore
+import androidx.compose.material.icons.filled.LocalHospital
+import androidx.compose.material.icons.filled.LocalParking
+import androidx.compose.material.icons.filled.LocalPharmacy
+import androidx.compose.material.icons.filled.LocalTaxi
+import androidx.compose.material.icons.filled.Movie
 import androidx.compose.material.icons.filled.PictureAsPdf
+import androidx.compose.material.icons.filled.PhoneAndroid
+import androidx.compose.material.icons.filled.Receipt
+import androidx.compose.material.icons.filled.Restaurant
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.ShoppingCart
+import androidx.compose.material.icons.filled.SmokingRooms
+import androidx.compose.material.icons.filled.SportsSoccer
+import androidx.compose.material.icons.filled.Train
 import androidx.compose.material.icons.filled.TrendingDown
 import androidx.compose.material.icons.filled.TrendingUp
+import androidx.compose.material.icons.filled.Wifi
+import androidx.compose.material.icons.filled.Work
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -73,6 +102,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.LaunchedEffect
 import androidx.fragment.app.FragmentActivity
@@ -113,13 +143,81 @@ data class TransactionCategory(
 
 val Categories = listOf(
     TransactionCategory("Salary", Icons.Default.AttachMoney, Color(0xFF10B981)),
+    TransactionCategory("Business", Icons.Default.BusinessCenter, Color(0xFF059669)),
+    TransactionCategory("Freelance", Icons.Default.Work, Color(0xFF14B8A6)),
+    TransactionCategory("Bonus", Icons.Default.Celebration, Color(0xFF22C55E)),
+    TransactionCategory("Interest", Icons.Default.AccountBalance, Color(0xFF84CC16)),
+    TransactionCategory("Dividend", Icons.Default.AttachMoney, Color(0xFF65A30D)),
+    TransactionCategory("Investment", Icons.Default.AccountBalanceWallet, Color(0xFF0EA5E9)),
+    TransactionCategory("Stock", Icons.Default.AccountBalance, Color(0xFF0284C7)),
+    TransactionCategory("Mutual Fund", Icons.Default.AccountBalanceWallet, Color(0xFF2563EB)),
+    TransactionCategory("Rental Income", Icons.Default.Home, Color(0xFF38BDF8)),
+    TransactionCategory("Gift", Icons.Default.Celebration, Color(0xFFF472B6)),
+    TransactionCategory("Refund", Icons.Default.Receipt, Color(0xFF2DD4BF)),
     TransactionCategory("Food", Icons.Default.Fastfood, Color(0xFFF59E0B)),
+    TransactionCategory("Grocery", Icons.Default.LocalGroceryStore, Color(0xFF16A34A)),
+    TransactionCategory("Restaurant", Icons.Default.Restaurant, Color(0xFFEA580C)),
+    TransactionCategory("Cafe", Icons.Default.LocalCafe, Color(0xFFA16207)),
+    TransactionCategory("Drinks", Icons.Default.LocalDrink, Color(0xFF06B6D4)),
+    TransactionCategory("Smoking", Icons.Default.SmokingRooms, Color(0xFF78716C)),
     TransactionCategory("Shopping", Icons.Default.ShoppingCart, Color(0xFFEC4899)),
+    TransactionCategory("Clothing", Icons.Default.ShoppingCart, Color(0xFFDB2777)),
+    TransactionCategory("Personal Care", Icons.Default.Favorite, Color(0xFFFB7185)),
     TransactionCategory("Rent", Icons.Default.Home, Color(0xFF3B82F6)),
+    TransactionCategory("EMI", Icons.Default.CreditCard, Color(0xFF6366F1)),
+    TransactionCategory("Loan", Icons.Default.AccountBalance, Color(0xFF4F46E5)),
+    TransactionCategory("Credit Card", Icons.Default.CreditCard, Color(0xFF7C3AED)),
     TransactionCategory("Transport", Icons.Default.DirectionsCar, Color(0xFF8B5CF6)),
+    TransactionCategory("Fuel", Icons.Default.LocalGasStation, Color(0xFF9333EA)),
+    TransactionCategory("Parking", Icons.Default.LocalParking, Color(0xFF6D28D9)),
+    TransactionCategory("Taxi", Icons.Default.LocalTaxi, Color(0xFFEAB308)),
+    TransactionCategory("Bus", Icons.Default.DirectionsBus, Color(0xFFCA8A04)),
+    TransactionCategory("Train", Icons.Default.Train, Color(0xFF0891B2)),
+    TransactionCategory("Flight", Icons.Default.Flight, Color(0xFF2563EB)),
     TransactionCategory("Utilities", Icons.Default.Lightbulb, Color(0xFF06B6D4)),
+    TransactionCategory("Bills", Icons.Default.Receipt, Color(0xFF0E7490)),
+    TransactionCategory("Electricity", Icons.Default.Lightbulb, Color(0xFFFACC15)),
+    TransactionCategory("Water", Icons.Default.LocalDrink, Color(0xFF38BDF8)),
+    TransactionCategory("Gas", Icons.Default.LocalGasStation, Color(0xFFF97316)),
+    TransactionCategory("Internet", Icons.Default.Wifi, Color(0xFF0EA5E9)),
+    TransactionCategory("Mobile", Icons.Default.PhoneAndroid, Color(0xFF22D3EE)),
+    TransactionCategory("Subscription", Icons.Default.Receipt, Color(0xFF64748B)),
+    TransactionCategory("Insurance", Icons.Default.AccountBalanceWallet, Color(0xFF0F766E)),
+    TransactionCategory("Medical", Icons.Default.LocalHospital, Color(0xFFDC2626)),
+    TransactionCategory("Pharmacy", Icons.Default.LocalPharmacy, Color(0xFFEF4444)),
+    TransactionCategory("Education", Icons.Default.School, Color(0xFF7C2D12)),
+    TransactionCategory("Childcare", Icons.Default.ChildCare, Color(0xFFF43F5E)),
+    TransactionCategory("Sports", Icons.Default.SportsSoccer, Color(0xFF22C55E)),
+    TransactionCategory("Fitness", Icons.Default.FitnessCenter, Color(0xFF84CC16)),
     TransactionCategory("Entertainment", Icons.Default.Celebration, Color(0xFFEF4444)),
+    TransactionCategory("Movies", Icons.Default.Movie, Color(0xFFBE123C)),
+    TransactionCategory("Travel", Icons.Default.Flight, Color(0xFF14B8A6)),
+    TransactionCategory("Hotel", Icons.Default.Hotel, Color(0xFF0D9488)),
+    TransactionCategory("Home Repair", Icons.Default.Build, Color(0xFF92400E)),
+    TransactionCategory("Maintenance", Icons.Default.Build, Color(0xFFB45309)),
+    TransactionCategory("Taxes", Icons.Default.Receipt, Color(0xFF475569)),
+    TransactionCategory("Charity", Icons.Default.Favorite, Color(0xFFE11D48)),
+    TransactionCategory("Gifts", Icons.Default.Celebration, Color(0xFFC026D3)),
+    TransactionCategory("Fees", Icons.Default.Receipt, Color(0xFF71717A)),
+    TransactionCategory("Bank Charges", Icons.Default.AccountBalance, Color(0xFF52525B)),
+    TransactionCategory("Cash Withdrawal", Icons.Default.AttachMoney, Color(0xFF15803D)),
     TransactionCategory("Other", Icons.Default.Category, Color(0xFF6B7280))
+)
+
+val IncomeCategories = setOf(
+    "Salary",
+    "Business",
+    "Freelance",
+    "Bonus",
+    "Interest",
+    "Dividend",
+    "Investment",
+    "Stock",
+    "Mutual Fund",
+    "Rental Income",
+    "Gift",
+    "Refund",
+    "Other"
 )
 
 fun getCategoryIcon(name: String): ImageVector {
@@ -152,7 +250,7 @@ fun FinanceTrackerApp(viewModel: FinanceViewModel) {
         }
     }
 
-    var currentTab by remember { mutableStateOf(0) }
+    var currentTab by rememberSaveable { mutableStateOf(0) }
 
     var showAddDialog by remember { mutableStateOf(false) }
 
@@ -160,7 +258,7 @@ fun FinanceTrackerApp(viewModel: FinanceViewModel) {
     val activity = remember(context) { context as? FragmentActivity }
     
     var isBiometricSetupEnabled by remember { mutableStateOf(viewModel.isBiometricEnabled()) }
-    var isUnlocked by remember { mutableStateOf(!isBiometricSetupEnabled) }
+    var isUnlocked by rememberSaveable { mutableStateOf(!isBiometricSetupEnabled) }
 
     fun showBiometricPrompt(
         title: String,
@@ -214,9 +312,9 @@ fun FinanceTrackerApp(viewModel: FinanceViewModel) {
         }
     }
 
-    var isLoading by remember { mutableStateOf(false) }
-    var statusMessage by remember { mutableStateOf<String?>(null) }
-    var errorMessage by remember { mutableStateOf<String?>(null) }
+    var isLoading by rememberSaveable { mutableStateOf(false) }
+    var statusMessage by rememberSaveable { mutableStateOf<String?>(null) }
+    var errorMessage by rememberSaveable { mutableStateOf<String?>(null) }
 
     var showCustomDateDialog by remember { mutableStateOf(false) }
     var tempStartDate by remember { mutableStateOf(0L) }
@@ -250,27 +348,18 @@ fun FinanceTrackerApp(viewModel: FinanceViewModel) {
         contract = ActivityResultContracts.CreateDocument("text/xml")
     ) { uri ->
         uri?.let {
-            try {
-                val outputStream = context.contentResolver.openOutputStream(it)
-                if (outputStream != null) {
-                    isLoading = true
-                    viewModel.exportToXml(
-                        outputStream = outputStream,
-                        onComplete = {
-                            isLoading = false
-                            statusMessage = "Transactions successfully exported to XML!"
-                        },
-                        onError = { err ->
-                            isLoading = false
-                            errorMessage = err
-                        }
-                    )
-                } else {
-                    errorMessage = "Failed to open destination file"
+            isLoading = true
+            viewModel.exportToXml(
+                uri = it,
+                onComplete = {
+                    isLoading = false
+                    statusMessage = "Transactions successfully exported to XML!"
+                },
+                onError = { err ->
+                    isLoading = false
+                    errorMessage = err
                 }
-            } catch (e: Exception) {
-                errorMessage = "Export failed: ${e.localizedMessage}"
-            }
+            )
         }
     }
 
@@ -308,27 +397,18 @@ fun FinanceTrackerApp(viewModel: FinanceViewModel) {
         contract = ActivityResultContracts.CreateDocument("application/pdf")
     ) { uri ->
         uri?.let {
-            try {
-                val outputStream = context.contentResolver.openOutputStream(it)
-                if (outputStream != null) {
-                    isLoading = true
-                    viewModel.exportToPdf(
-                        outputStream = outputStream,
-                        onComplete = {
-                            isLoading = false
-                            statusMessage = "Statement exported to PDF successfully!"
-                        },
-                        onError = { err ->
-                            isLoading = false
-                            errorMessage = err
-                        }
-                    )
-                } else {
-                    errorMessage = "Failed to create PDF file"
+            isLoading = true
+            viewModel.exportToPdf(
+                uri = it,
+                onComplete = {
+                    isLoading = false
+                    statusMessage = "Statement exported to PDF successfully!"
+                },
+                onError = { err ->
+                    isLoading = false
+                    errorMessage = err
                 }
-            } catch (e: Exception) {
-                errorMessage = "Export failed: ${e.localizedMessage}"
-            }
+            )
         }
     }
 
@@ -337,27 +417,18 @@ fun FinanceTrackerApp(viewModel: FinanceViewModel) {
         contract = ActivityResultContracts.CreateDocument("text/csv")
     ) { uri ->
         uri?.let {
-            try {
-                val outputStream = context.contentResolver.openOutputStream(it)
-                if (outputStream != null) {
-                    isLoading = true
-                    viewModel.exportToCsv(
-                        outputStream = outputStream,
-                        onComplete = {
-                            isLoading = false
-                            statusMessage = "Transactions successfully exported to CSV!"
-                        },
-                        onError = { err ->
-                            isLoading = false
-                            errorMessage = err
-                        }
-                    )
-                } else {
-                    errorMessage = "Failed to open destination file"
+            isLoading = true
+            viewModel.exportToCsv(
+                uri = it,
+                onComplete = {
+                    isLoading = false
+                    statusMessage = "Transactions successfully exported to CSV!"
+                },
+                onError = { err ->
+                    isLoading = false
+                    errorMessage = err
                 }
-            } catch (e: Exception) {
-                errorMessage = "Export failed: ${e.localizedMessage}"
-            }
+            )
         }
     }
 
@@ -1424,7 +1495,7 @@ fun AddTransactionDialog(onDismiss: () -> Unit, onSave: (String, Double, String,
                     Button(
                         onClick = {
                             type = "EXPENSE"
-                            if (selectedCategory == "Salary") selectedCategory = "Food"
+                            if (IncomeCategories.contains(selectedCategory)) selectedCategory = "Food"
                         },
                         modifier = Modifier
                             .weight(1f)
@@ -1571,9 +1642,9 @@ fun AddTransactionDialog(onDismiss: () -> Unit, onSave: (String, Double, String,
                 Spacer(modifier = Modifier.height(8.dp))
 
                 val filterCats = if (type == "INCOME") {
-                    Categories.filter { it.name == "Salary" || it.name == "Other" }
+                    Categories.filter { IncomeCategories.contains(it.name) }
                 } else {
-                    Categories.filter { it.name != "Salary" }
+                    Categories.filter { !IncomeCategories.contains(it.name) || it.name == "Investment" || it.name == "Stock" || it.name == "Mutual Fund" || it.name == "Other" }
                 }
 
                 LazyRow(
@@ -1607,7 +1678,9 @@ fun AddTransactionDialog(onDismiss: () -> Unit, onSave: (String, Double, String,
                                     text = cat.name,
                                     color = TextPrimary,
                                     fontSize = 11.sp,
-                                    fontWeight = FontWeight.SemiBold
+                                    fontWeight = FontWeight.SemiBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
                                 )
                             }
                         }
